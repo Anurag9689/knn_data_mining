@@ -36,12 +36,10 @@ def major_k_selection(k: int = None, all_distances: np.ndarray = None):
     return np.argsort(all_distances)[:k]
 
 # Function to find the k nearest points in the training data to the observed inputs
-def find_nearest_points(observed_inputs: list, training_data: np.ndarray, k: int):
-    nearest_points_indices = []
-    for observed in observed_inputs:
-        distances = euclidean_distance(observed=np.array([observed]), actual=training_data)
-        nearest_indices = major_k_selection(k=k, all_distances=distances)
-        nearest_points_indices.append(nearest_indices)
+def find_nearest_points(observed_input: list, training_data: np.ndarray, k: int):
+    distances = euclidean_distance(observed=np.array([observed_input]), actual=training_data)
+    nearest_points_indices = [*major_k_selection(k=k, all_distances=distances)]
+    # nearest_points_indices.append(nearest_indices)
     return np.array(nearest_points_indices)
 
 # %%
@@ -65,14 +63,26 @@ test = diabetes_df_shuffled[num_train:]  # Testing set
 # Accuracy is calculated to evaluate the performance of the model.
 
 # Finding distances of all training points from the first observed point in the test set
-observed = test.iloc[:1, :-1].values
-print('Observed values:\n', observed)
+
+k = 3  # Set the value of k (number of nearest neighbors)
+if input("\n\nDo you want to update 'k' ? [Default k = 3] (y/n) : ").strip().lower() == 'y':
+    k = int(input("\tEnter a new value of k : "))
+print(f"\nValues of k = {k}\n")
+
+observed = test.iloc[:1, :-1].values.flatten()
+print('Default test case:\n', test.iloc[:1, :-1])
+columns = test.iloc[:1, :-1].columns.to_list()
+if input(f"\n\nDo you want to manually enter a test case (you'll need following: {columns} ) (y/n) : ").strip().lower() == 'y':
+    observed = [0.0]*len(columns)
+    for index, col in enumerate(columns):
+        observed[index] = float(input(f"Enter a floating point value for {col}: "))
+    observed = np.array(observed)
+print(f"\ntest case : {observed}")
 
 training_data = train.iloc[:, :-1].values
 print('Training values:\n', training_data)
 
-k = 3  # Set the value of k (number of nearest neighbors)
-nearest_indices = find_nearest_points(observed_inputs=observed, training_data=training_data, k=k)
+nearest_indices = find_nearest_points(observed_input=observed, training_data=training_data, k=k)
 print('\nIndices of the', k, 'nearest points in the training data:', nearest_indices)
 
 # Extracting the target variable ('Outcome') from the training data
@@ -82,9 +92,28 @@ nearest_labels = training_labels[nearest_indices]
 print("\nNearest labels:\n", nearest_labels)
 
 # Predicting the outcome based on majority voting
-outcome_counts = np.bincount(nearest_labels[0])
+outcome_counts = np.bincount(nearest_labels.flatten())
 predicted_outcome = np.argmax(outcome_counts)
 print('\nPredicted outcome based on majority voting:', predicted_outcome)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # Testing the model
 observed_points = test.iloc[:, :-1].values
@@ -92,7 +121,7 @@ actual_outcomes = test.iloc[:, -1].values
 
 predicted_outcomes = []
 for observed_point in observed_points:
-    nearest_indices = find_nearest_points(observed_inputs=[observed_point], training_data=training_data, k=k)
+    nearest_indices = find_nearest_points(observed_input=observed_point, training_data=training_data, k=k)
     nearest_labels = training_labels[nearest_indices].flatten()
     outcome_counts = np.bincount(nearest_labels)
     predicted_outcome = np.argmax(outcome_counts)
